@@ -1,0 +1,17 @@
+{
+  "articles/getting-started.html": {
+    "href": "articles/getting-started.html",
+    "title": "Getting Started | NeuroLoop by Advait S.",
+    "summary": "Getting Started"
+  },
+  "articles/introduction.html": {
+    "href": "articles/introduction.html",
+    "title": "Introduction | NeuroLoop by Advait S.",
+    "summary": "Introduction"
+  },
+  "index.html": {
+    "href": "index.html",
+    "title": "This is the HOMEPAGE. | NeuroLoop by Advait S.",
+    "summary": "This is the HOMEPAGE. Refer to Markdown for how to write markdown files. Quick Start Notes: Add images to the images folder if the file is referencing an image."
+  }
+}
