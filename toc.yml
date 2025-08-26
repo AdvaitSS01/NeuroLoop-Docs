@@ -1,5 +1,27 @@
 - name: Home
   href: index.md
+
+- name: Docs
+  items:
+    - name: Introduction
+      href: docs/01-intro.md
+    - name: Triggering & Multi-Device Synchronization
+      href: docs/02-triggers.md
+    - name: Multi-Arduino & Serial Communication
+      href: docs/03-multi-arduino.md
+    - name: Synchronising NI DAQ Analog and Digital Output in Bonsai Without LabVIEW
+      href: docs/sync-ni-daq.md
+
+- name: NeuroNotes
+  href: notes/
+
+- name: Blog
+  href: blog/
+
+- name: API
+  href: api/
+- name: Home
+  href: index.md
 - name: Articles
   items:
     - name: Introduction

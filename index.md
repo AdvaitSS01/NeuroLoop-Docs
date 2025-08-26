@@ -1,15 +1,14 @@
----
-_layout: landing
----
+# Welcome to NeuroLoop Docs
 
-# This is the **HOMEPAGE**. But it will soon be edited
+This site documents my work on building advanced closed-loop neuroscience experiments using **Bonsai**, **NI DAQ**, and **Arduinos**.  
 
-Refer to [Markdown](http://daringfireball.net/projects/markdown/) for how to write markdown files.
+Here you will find articles on:  
 
-## Quick Start Notes:
+- High-frequency triggers across devices  
+- Multi-Arduino serial communication  
+- Real-time closed-loop logic  
+- Eye-state detection and response control  
+- Troubleshooting, optimization, and lessons learned  
 
-1. Add images to the *images* folder if the file is referencing an image.
+Use the sidebar to navigate through the topics.
 
-2. Smile
-
-3. Write & grind
