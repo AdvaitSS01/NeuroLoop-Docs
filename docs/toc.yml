@@ -1,3 +1,4 @@
-- name: Synchronising NI DAQ Analog and Digital Output in Bonsai Without LabVIEW
-  href: articles/sync-ni-daq.md
-
+- name: Docs
+  href: articles/
+- name: API
+  href: api/
