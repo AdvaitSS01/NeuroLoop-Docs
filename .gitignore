@@ -1,2 +1,7 @@
 _site/
-.DS_Store
+*.html
+*.pdf
+*.json
+*.yml
+*.xml
+
