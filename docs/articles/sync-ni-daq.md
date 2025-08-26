@@ -1,10 +1,4 @@
----
-title: "Synchronising NI DAQ Analog and Digital Output in Bonsai Without LabVIEW"
-date: 2025-08-26
-layout: post
-categories: [Bonsai, DAQ, Guides]
-tags: [NI-DAQ, Bonsai, analog, digital, synchronization]
----
+# Synchronising NI DAQ Analog and Digital Output in Bonsai Without LabVIEW
 
 ## Introduction
 
