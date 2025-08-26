@@ -1,16 +1,8 @@
 - name: Home
   href: index.md
-
+      
 - name: Docs
-  items:
-    - name: Introduction
-      href: docs/01-intro.md
-    - name: Triggering & Multi-Device Synchronization
-      href: docs/02-triggers.md
-    - name: Multi-Arduino & Serial Communication
-      href: docs/03-multi-arduino.md
-    - name: Synchronising NI DAQ Analog and Digital Output in Bonsai Without LabVIEW
-      href: docs/sync-ni-daq.md
+  href: docs/  
 
 - name: NeuroNotes
   href: notes/
@@ -20,19 +12,4 @@
 
 - name: API
   href: api/
-- name: Home
-  href: index.md
-- name: Articles
-  items:
-    - name: Introduction
-      href: articles/01-intro.md
-    - name: Triggering & Multi-Device Synchronization
-      href: articles/02-triggers.md
-    - name: Multi-Arduino & Serial Communication
-      href: articles/03-multi-arduino.md
-    - name: Closed-Loop Logic & Image Analysis
-      href: articles/04-closed-loop.md
-- name: Docs
-  href: articles/
-- name: API
-  href: api/
+
