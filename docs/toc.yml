@@ -1,0 +1,12 @@
+- name: Introduction
+  href: 01-intro.md
+
+- name: Triggering & Multi-Device Synchronization
+  href: 02-triggers.md
+
+- name: Multi-Arduino & Serial Communication
+  href: 03-multi-arduino.md
+
+- name: Synchronising NI DAQ Analog and Digital Output in Bonsai Without Lag
+  href: sync-ni-daq.md
+
