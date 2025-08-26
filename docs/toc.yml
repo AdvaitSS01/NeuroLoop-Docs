@@ -1,12 +1,5 @@
 - name: Docs
   href: articles/
-  items:
-    - name: Introduction
-      href: articles/introduction.md
-    - name: Getting Started
-      href: articles/getting-started.md
-    - name: Sync with NI-DAQ
-      href: articles/sync-ni-daq.md
 - name: API
   href: api/
 
