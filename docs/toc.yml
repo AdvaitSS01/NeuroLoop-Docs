@@ -1,10 +1,10 @@
 - name: Docs
   href: articles/index.md
   items:
-    - name: Introduction
-      href: articles/introduction.md
-    - name: Getting Started
-      href: articles/getting-started.md
+    - name: Rearming DAQ
+      href: articles/daq-rearm.md
+    - name: Multi-device synchronisation
+      href: articles/sync-devices.md
     - name: Sync with NI-DAQ
       href: articles/sync-ni-daq.md
 
