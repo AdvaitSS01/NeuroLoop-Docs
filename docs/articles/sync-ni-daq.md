@@ -1,148 +1,163 @@
 # Synchronising NI DAQ Analog and Digital Output in Bonsai Without LabVIEW
 
-## Introduction
+## 1. Concept definition
 
-Real-time synchronisation of multiple data streams and triggers is a core requirement in systems neuroscience, especially in closed-loop experiments. Minimising latency is essential — but if you’re using National Instruments' DAQ hardware without LabVIEW, relying instead on open tools like Bonsai, you’re in for a confusing ride — the kind where you don’t even know if you’re holding the map the right way up.
+**Goal:** start analog and digital outputs on National Instruments (NI) DAQ hardware from Bonsai, using a single shared hardware trigger (PFI1), without LabVIEW — achieving consistent trial-to-trial behaviour for closed-loop experiments.
 
-DAQ hardware is powerful — internal routing, programmable timing engines, and triggering flexibility — but the real challenge is not the hardware. It’s understanding the complex DAQmx libraries and their behaviour in tools that abstract them away. NI DAQs are like dragons that respond only to ancient, undocumented spells.
+**Required signals in this workflow:**
+- Digital output (TTL) — e.g., a square wave to trigger a camera or device.
+- Analog output — e.g., white noise, ramp, or sine stimulus.
+- Shared start trigger routed to **PFI1**.
 
-This post outlines the core problems I encountered while synchronising NI DAQ analog and digital output lines inside Bonsai, and how I eventually solved them by blending Bonsai’s reactive programming model with DAQ-level control — all without any external accessories like LabVIEW. The solutions here rely on tweaking both the Bonsai graph and custom C# code.
-
----
-
-## Background: Bonsai, DAQmx, and the Black Box
-
-Bonsai provides a DAQmx package with AnalogOutput, DigitalOutput, and related IO nodes. These are minimal wrappers around DAQmx functions, designed to get you started with visual pipelines. But things get tricky when you move beyond static IO.
-
-I needed to synchronise:
-
-- A digital output signal (e.g., TTL square wave) to trigger a camera or another device
-- An analog output signal (e.g., white noise, ramp, or sine wave) to control stimulation
-
-Both signals needed to start on a shared trigger — routed to PFI1. I used a script to generate both signals, connected them to the respective output nodes, and expected the common trigger to start both outputs in sync. Simple idea. Didn’t work. Like two sprinters waiting for a starting gun, but only the one closest to the ref hears it and takes off.
+Target behaviour: both outputs should begin on the same rising-edge trigger and be re-armable across repeated trials.
 
 ---
 
-## Problem 1: Digital Output — Finite Sampling Weirdness
+## 2. Context & motivation
 
-The digital output node in Bonsai accepts an OpenCV `Mat` formatted as `{1, N}` — where N is the number of samples. But here’s the catch — in **finite sampling mode**, you must match your **buffer size exactly** to your **sample count**. Unlike continuous mode, you can’t have extra samples lounging around.
+Real-time synchronisation of multiple data streams and triggers is central to closed-loop systems neuroscience. NI DAQs provide flexible hardware routing and precise timing—but the software layer (DAQmx wrappers in Bonsai) abstracts many details and hides failure modes. Running DAQ output tasks in finite sampling mode and coordinating them via Bonsai’s reactive graph exposes mismatches between DAQmx expectations and Bonsai’s default execution model.
 
-Initially, I tried sending a TTL waveform like `[0,1,0,1,...]` over 10,000 samples at 1 kHz. But what I got was a **single TTL pulse**, then nothing — no errors either.
-
-### Debugging It with Visual Studio
-
-Attaching Visual Studio to the running Bonsai process revealed:
-
-- The task was **not being recreated** after each trigger.
-- Sample buffers weren’t flushed correctly.
-- `autostart` behaviour in Bonsai wasn’t granular enough for DAQ control.
-- **Rearm** functionality was missing — repeated triggering simply didn’t work unless manually reset.
-
-### Fix: Writing a Custom C# Digital Output Node
-
-I wrote a new node in C# that:
-
-- Accepts a 1D matrix and repeats it internally
-- Recreates the task each time data is received
-- Allows configuration of sample rate and buffer size
-- Explicitly disables autostart
-- Exposes a `StartTrigger` property for external triggering
-- Arms the task and calls `.Start()` manually inside `OnNext()`
-- Includes `Rearm = true` for repeated trials
-
-This gave me proper finite-sampled TTL trains, with behaviour predictable across trials.
+This note documents the problems encountered, the debugging process (including Visual Studio attachment), and the eventual solution combining custom C# nodes and Bonsai threading (`ObserveOn` + `NewThreadScheduler`). The aim is a reproducible, conceptually clear entry for the NeuroHardware corpus.
 
 ---
 
-## Problem 2: Analog Output Needs the Same Treatment
+## 3. Observed behaviour & failure modes
 
-Analog output had similar issues — Bonsai’s default node assumes simple, one-shot execution. I wanted white noise output sampled at 1000 Hz for 15 seconds. Using a `Script` node to generate the waveform, connected to the analog output with `autostart = false`, I expected it to trigger along with the digital output.
+### 3.1 Initial setup
+- Waveforms generated in Bonsai `Script` nodes:
+  - TTL waveform: e.g. `[0,1,0,1,...]` with **10,000 samples** at **1 kHz** (finite mode).
+  - Analog waveform: white noise sampled at **1 kHz** for **15 seconds** (finite mode).
+- Both `AnalogOutput` and `DigitalOutput` nodes assigned the same `.StartTrigger = /Dev1/PFI1`.
+- Expected: both tasks arm and start on the same trigger.
 
-Only one of them fired. The other stayed silent.
+### 3.2 Actual result
+- Only one output executes on trigger; the other remains silent.
+- The active output tends to be the one declared first in the graph.
+- No immediate Bonsai error dialogs — failures were silent.
 
----
-
-## Problem 3: Triggering Two Outputs Simultaneously — and Failing
-
-At this point, both custom nodes worked individually. But together?
-
-- DO and AO shared the same `StartTrigger` (PFI1).
-- Only one line executed on trigger — whichever one was declared first.
-
-It’s as if Bonsai politely queues your nodes in single file, despite your desperate plea for them to start together like a firing squad.
-
-I suspected a race condition or hardware conflict on shared start triggers. I tried modifying the AO node to export a signal to another PFI (PFI2) and use that as the trigger for DO. Still didn’t work.
-
-Then I added a **1.5 second delay** between arming and triggering, thinking both nodes would be ready by then. No dice. Delaying doesn’t guarantee both nodes are armed because Bonsai’s default execution is serial, not parallel.
-
----
-
-## Realisation: Bonsai Runs Nodes Synchronously
-
-Bonsai, bless its heart, believes in order. Even when what you really want is organised chaos.
-
-The core issue: Bonsai’s default scheduling — nodes execute serially, meaning one gets armed, the other doesn’t. No matter how clever your trigger routing, only one node actually sees the signal in time.
-
-I even explored inserting `Thread.Sleep()` and playing with `WaitUntilDone`. Those were hacks — ineffective at solving the root problem.
+### 3.3 Debugging via Visual Studio
+Attaching Visual Studio to Bonsai while running revealed:
+- DAQ task objects were **not being recreated** per trial.
+- Buffers were not flushed between trials.
+- Bonsai’s `autostart` parameter produced uncontrolled one-shot behaviour.
+- There was **no implicit rearm** — repeated triggers did nothing unless the task was reset/ recreated.
 
 ---
 
-## Final Fix: ObserveOn and Asynchronous Threading
+## 4. Mechanistic analysis
 
-The reactive model of Bonsai shines — but only if you understand threading.
+| Component | Observed constraint | Root cause |
+|----------:|---------------------|-----------|
+| **DigitalOutput (finite)** | Requires exact buffer length `{1, N}` where N == sample count | DAQmx fails silently if buffer/sample mismatch occurs |
+| **AnalogOutput (finite)** | One-shot assumption; not rearmed automatically | Bonsai’s wrapper doesn’t recreate or rearm DAQmx tasks |
+| **Trigger routing (PFI1)** | Only one task sees trigger when both share PFI1 | Bonsai schedules node execution serially so only one node arms in time |
+| **Timing model** | Bonsai executes nodes synchronously within a stream | Serial arming leads to race conditions for hardware start triggers |
 
-The fix:
-
-- Insert `ObserveOn` before each output node
-- Set the `Scheduler` property to a custom thread scheduler (using `Externalize`)
-- Connect `NewThreadScheduler` nodes to enforce asynchronous execution
-
-Now each output node operates on its own thread — like giving each output its own room, so they stop fighting over who gets the bathroom first.
-
----
-
-## Physical Wiring and Trigger Graph
-
-To send the actual trigger signal, I used a `DigitalOutput` line from Bonsai (via a scripted rising edge), physically wired to `PFI1` on the DAQ. That line acts as the master trigger for both DO and AO nodes.
-
-I also explored internal signal routing where AO exports a trigger signal to PFI2 for DO to listen to. Elegant in theory, but it failed because AO wasn’t starting in time to generate the export — a catch-22 born of serial execution.
+**Key insight:** Bonsai’s *reactive* appearance masks a synchronous execution backbone. Two nodes subscribing to the same trigger will not necessarily *arm* simultaneously; they must be prepared (armed) before the trigger edge reaches the DAQ hardware.
 
 ---
 
-## Bonsai Graph Summary
+## 5. Implementation — steps taken to reconstruct synchrony
 
-pgsql
-CopyEdit
-Timer → Script (white noise) → ObserveOn → AO
-      ↘︎ Script (TTL)       → ObserveOn → DO
+### 5.1 Custom Digital Output node (C#)
+I implemented a custom Bonsai node with these behaviors:
+- Accepts a 1-D OpenCV `Mat` as input (shape `{1, N}` for N samples).
+- **Disables `autostart`** and explicitly controls `.Start()`.
+- **Recreates the DAQmx task** for each incoming waveform (task recreation on `OnNext()`).
+- Exposes `.StartTrigger` (set to `/Dev1/PFI1`).
+- Supports `Rearm = true` so the node can be used across trials.
+- Parameters for sample rate and buffer size configurable from node properties.
 
-Trigger Source → RisingEdge → DO line → PFI1
-Both AO and DO nodes use PFI1 as their .StartTrigger
+**Why:** finite sampling mode requires precise buffer/sample alignment and fresh task setup per trial; task recreation prevents stale handles and ensures DAQmx accepts the next trigger.
 
-# Lessons Learned (The Real Debugging Process)
+### 5.2 Analog Output adjustments
+- Used the same re-creation and `autostart=false` pattern on the analog node.
+- Waveform generation performed in a `Script` node (white noise or ramp), then passed to the modified AO node.
+- Ensured sample rate and buffer count matched exactly to avoid silent failures.
 
-Here are things that matter but rarely get discussed:
+### 5.3 Concurrent arming with `ObserveOn` / threading
+Bonsai’s default execution is serial. To guarantee both AO and DO were armed before the shared trigger:
 
-- **Finite vs Continuous Sampling:** Buffer sizes must exactly match sample counts in finite mode.  
-- **Rearm is critical:** Without enabling it, DAQ tasks won’t respond on the next trial. DAQmx isn’t the kind of guest who refills their own plate at dinner — you have to invite them back every time.  
-- **Silent failures are dangerous:** Bonsai won’t throw DAQ errors unless explicitly caught — use Visual Studio + `ConsoleWrite` nodes.  
-- **Threading matters:** Execution order in Bonsai is serial unless split using `ObserveOn` and custom schedulers.  
-- **Delays and Sleep don’t fix race conditions:** Only proper threading guarantees concurrent arming.  
-- **Physical wiring is still best:** Sending a digital pulse via hardware remains the most reliable trigger.  
-- **Internal routing is tricky:** Exported signals from AO can’t trigger DO if AO never starts — again, catch-22.  
+- Inserted `ObserveOn` operators before each output node.
+- Externalized the scheduler and used `NewThreadScheduler` so each output runs on its own thread.
+- Ensured each output thread performs the task creation and `.Start()` call independent of the main graph thread.
+
+**Graph sketch:**
+
+Timer → Script (white noise) → ObserveOn → AnalogOutput  
+  ↘ Script (TTL) → ObserveOn → DigitalOutput  
+
+Trigger Source → RisingEdge → DO line → PFI1  
+Both AO and DO use **PFI1** as **StartTrigger**
+
+# Synchronising AO and DO in Bonsai (Finite Sampling Mode)
+
+## 5.4 Additional experiments attempted (and why they failed)
+- **Cascading triggers (AO exports to PFI2 → DO):** failed because AO did not start early enough to generate the export (catch-22).
+- **Adding `Thread.Sleep()` or `WaitUntilDone`:** ineffective — only masked the race, did not ensure reliable arming.
+- **Relying on software triggers alone:** proved brittle compared to physical line routing.
 
 ---
 
-# Reflections
+## 6. Behavioural verification
 
-Synchronising AO and DO in Bonsai without LabVIEW is not trivial. But with a mix of custom node design, reactive programming, and careful hardware routing, it’s doable — just not out of the box, and certainly not without a few existential questions along the way.
+- For hardware triggering, I used a Bonsai-scripted rising edge on a digital line physically wired to **PFI1**.  
+- Qualitative verification across many trials showed both outputs beginning together on the trigger when using the custom nodes + `ObserveOn` threading configuration.  
+- Observed behaviour: TTL trains and analog waveform started as expected, with consistent trial-to-trial execution.
 
-You need to:
+> **Note:** Quantitative jitter and latency measurements (oscilloscope traces, timestamped DAQ logs) are planned for a follow-up post; current validation is functional and trial-consistent.
 
-- Understand how `ObserveOn` separates thread contexts  
-- Be explicit about `autostart`, task creation, and trigger assignment  
-- Test each node independently before syncing them  
+---
 
-This post is just a starting point. In a future one, I’ll share the full C# code for the custom DO and AO nodes.
+## 7. Operational principles (design rules)
+
+1. **Finite-mode tasks require exact buffers:** In finite sampling, match `buffer size == sample count` exactly. Oversized or undersized buffers cause silent failures.  
+2. **Recreate DAQ tasks per trial:** Do not reuse finite-mode tasks; recreate them in `OnNext()` to ensure rearm and fresh handles.  
+3. **Disable `autostart`:** Use explicit `.Start()` after initialising the task to control the exact arming moment.  
+4. **Use thread-level isolation for concurrent arming:** `ObserveOn(NewThreadScheduler)` gives each output its own thread context and prevents serial-arming race conditions.  
+5. **Prefer hardware routing for determinism:** Physically wiring a digital line into PFI1 is more reliable than purely software-triggered signals.  
+6. **Avoid `Thread.Sleep()` for synchronization:** Sleep/delay hacks do not guarantee proper arming; they only add nondeterministic timing windows.  
+7. **Catch silent failures via active debugging:** Bonsai may not surface DAQmx errors; attach Visual Studio or add logging (`ConsoleWrite`) to detect task state issues.
+
+These are not ephemeral debugging tips — they form the operational core of building robust closed-loop rigs with Bonsai + NI hardware.
+
+---
+
+## 8. Conceptual insight (temporal framing)
+
+Synchronisation is a **three-clock alignment problem:**
+- **Hardware time** — the DAQ’s internal engine (PFI routing, timing engine).  
+- **Software time** — Bonsai’s reactive scheduler and node execution semantics.  
+- **Cognitive time** — the experimenter’s mental model of event ordering and causality.  
+
+A reliable system aligns all three: tasks must be prepared (software), routes must be correctly wired (hardware), and the experimenter must conceive triggers and trial structure coherently (cognitive). When these clocks are misaligned, behavior appears intermittent or silent. Treat each output node as a *temporal agent* that must be explicitly prepared and synchronized.
+
+---
+
+## 9. Classification (metadata)
+
+- **Domain:** Systems Neuroscience / Experimental Control  
+- **Software layer:** Bonsai (DAQmx nodes, Script, ObserveOn, Scheduler)  
+- **Hardware layer:** NI DAQ (PFI1, PFI2, AO/DO lines)  
+- **Category:** Synchronisation — Finite Sampling, Triggering, Concurrency  
+
+---
+
+## 10. Summary & next steps
+
+Synchronising AO and DO in Bonsai without LabVIEW is feasible but requires:
+- explicit DAQ task lifecycle management (recreate + `.Start()`),
+- exact buffer/sample alignment in finite mode,
+- and explicit thread separation for concurrent arming (`ObserveOn` + `NewThreadScheduler`).
+
+**Next practical steps:**
+- Share the **C# source** for the custom DO/AO nodes (planned follow-up).  
+- Add **quantitative verification** (oscilloscope traces and jitter histograms).  
+- Convert the config into a reproducible Bonsai graph file and a minimal reproducible example.
+
+---
+
+**NeuroHardware entry:**  
+This document is intended to be a canonical node in the **NeuroHardware lexicon** — it captures a repeatable synchronization pattern (failure modes, mechanism, and design rules) that is applicable to other DAQ + visual-pipeline integrations.
 
 
