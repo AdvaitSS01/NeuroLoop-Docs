@@ -83,11 +83,9 @@ Establish **device authority** for synchronization:
 
 ## 7. Operational Graph
 
-```text
 Timer → Script (DAQ pulses) → ObserveOn → DigitalOutput → PFI1 → Camera External Trigger
 ↘ Arduino listens TTL → Event Logging
 
-## 7. Operational Graph Notes
 
 - Both Camera and Arduino events reference DAQ rising edge.  
 - `ObserveOn` / `NewThreadScheduler` ensures concurrent task readiness.  
