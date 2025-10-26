@@ -1,24 +1,6 @@
-# Welcome to NeuroLoop Docs
-
-This site documents my work on building advanced closed-loop neuroscience experiments using **Bonsai**, **NI DAQ**, and **Arduinos**.  
-
-Here you will find articles on:  
-
-- High-frequency triggers across devices  
-- Multi-Arduino serial communication  
-- Real-time closed-loop logic  
-- Eye-state detection and response control  
-- Troubleshooting, optimization, and lessons learned  
-
-Use the sidebar to navigate through the topics.
-
----
-title: Neuroloop
-keywords: [Neuroscience, Cerebellum, Closed Loop Experiments, Epistemology, Neurohardware, AI-Augmented Science, Knowledge Systems, Learning, Bonsai, NI-DAQ, Arduino, Experimental Neuroscience, Scientific Synthesis, Cognitive Architecture]
----
-
 # **Neuroloop: Building a Thinking Infrastructure for Science**
 
+Welcome to NeuroLoop Docs.
 I am building **Neuroloop** as a long-term project to design *thinking infrastructure* for science — systems that help us **learn, connect, and synthesize** complex knowledge.
 
 My work lies at the intersection of **Neuroscience**, **Neurohardware**, and **Epistemology**, exploring how tools, theories, and data connect to create understanding.  
@@ -116,13 +98,9 @@ It’s an ongoing experiment in *how to think better about complex systems*, mer
 
 ---
 
-## 📬 **Explore Further**
-- [Blog](./blog/) — Essays, lab notes, and conceptual analyses  
-- [Notes](./notes/) — Raw transcripts, maps, and working material  
+## 📬 **Explore Further**  
 - [Docs](./docs/) — Technical documentation and experimental build logs  
-
+- [NeuroNotes](./notes/) — Raw transcripts, maps, and working material  
+- [Blog](./blog/) — Essays, lab notes, and conceptual analyses 
 ---
-
-### **Made with DocFX**
-*“Connecting the systems that help us think, not just what we think about.”*
 
