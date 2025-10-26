@@ -7,6 +7,8 @@
       href: articles/sync-devices.md
     - name: Sync with NI-DAQ
       href: articles/sync-ni-daq.md
+    - name: Timing Control in Closed loop
+      href: articles/timing-control.md
 
 - name: API
   href: api/
