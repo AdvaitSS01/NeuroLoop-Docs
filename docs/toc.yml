@@ -11,6 +11,8 @@
       href: articles/timing-control.md
     - name: Temporal jitter in Closed loop
       href: articles/measuring-temporal-jitter.md
+    - name: Closed loop debugging
+      href: articles/closed-loop-debugging.md
 
 - name: API
   href: api/
