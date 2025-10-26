@@ -9,6 +9,8 @@
       href: articles/sync-ni-daq.md
     - name: Timing Control in Closed loop
       href: articles/timing-control.md
+    - name: Temporal jitter in Closed loop
+      href: articles/temporal-jitter.md
 
 - name: API
   href: api/
