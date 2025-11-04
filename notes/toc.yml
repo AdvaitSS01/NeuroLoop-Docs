@@ -1,0 +1,8 @@
+- name: NeuroNotes
+  href: articles/index.md
+  items:
+    - name: Note 1 Title
+      href: articles/nn_1.md
+    - name: Note 2 Title
+      href: articles/nn_2.md
+

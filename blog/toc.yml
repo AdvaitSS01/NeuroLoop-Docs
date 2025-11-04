@@ -1,0 +1,5 @@
+- name: Blog
+  href: articles/index.md
+  items:
+    - name: Post 1 Title
+      href: articles/blog_1.md
