@@ -1,14 +1,15 @@
 - name: Home
   href: index.md
-      
+
 - name: Docs
-  href: docs/  
+  href: docs/
 
 - name: NeuroNotes
-  href: notes/index.md
+  href: notes/
 
 - name: Blog
-  href: blog/index.md
+  href: blog/
 
 - name: About me
-  href: cv/index.md
+  href: cv/
+
