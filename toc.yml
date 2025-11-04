@@ -10,4 +10,5 @@
 - name: Blog
   href: blog/index.md
 
-
+- name: About me
+  href: cv/index.md
